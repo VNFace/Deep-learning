@@ -35,6 +35,13 @@ class Dense(layers.Layer):
     def call(self,inputs):
         return tf.matmul(inputs,self.w)+self.b
 
+class MyRelu(layers.Layer):
+    def __init__(self):
+        super(MyRelu,self).__init__()
+
+    def call(self,x):
+        return tf.math.maximum(x,0)
+
 
 class MyModel(keras.Model):
     def __init__(self, num_classes=10):
@@ -42,11 +49,13 @@ class MyModel(keras.Model):
 
         self.dense1 = Dense(64)
         self.dense2 = Dense(num_classes)
+        self.relu = MyRelu()
         #self.dense1 = layers.Dense(64)
         #self.dense2 = layers.Dense(num_classes)
     
     def call(self,input_tensor):
-        x = tf.nn.relu(self.dense1(input_tensor))
+        #x = tf.nn.relu(self.dense1(input_tensor))
+        x = self.relu(self.dense1(input_tensor))
         return self.dense2(x)
 
 
