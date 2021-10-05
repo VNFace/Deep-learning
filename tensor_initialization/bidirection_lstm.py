@@ -30,9 +30,8 @@ class BRNN(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.lstm = nn.LSTM(input_size,hidden_size,num_layers,batch_first = True,
-                            bidirectional = True)
-        self.fc = nn.Linear(hidden_size*2,num_layers)
+        self.lstm = nn.LSTM(input_size,hidden_size,num_layers,batch_first = True, bidirectional = True)
+        self.fc = nn.Linear(hidden_size*2,num_classes)
     def forward(self,x):
         h0 = torch.zeros(self.num_layers*2,x.size(0),self.hidden_size).to(device)
         c0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size).to(device)
