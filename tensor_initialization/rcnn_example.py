@@ -6,15 +6,40 @@ from torch.utils.data import DataLoader #Gives easier dataset management and cre
 import torchvision.datasets as datasets  #Has standard datasets we can import in a nice way
 import torchvision.transforms as transforms #Transformations we can perform on our dataset
 
+
+
 #Set device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 #Hyperparameter
-in_channels = 1
+input_size = 28
+sequence_length = 28
+num_layers = 2
+hidden_size = 256
 num_classes = 10
 learning_rate = 0.001
 batch_size = 64
-num_epochs  =5
+num_epochs  =1
+
+
+#Create RCNN
+class RCNN(nn.Module):
+    def __init__(self,input_size,hidden_size,num_layer,num_class):
+        super(RCNN,self).__init__()
+        self.hidden_size = hidden_size
+        self.num_layers = num_layer
+        self.rnn = nn.RNN(input_size,hidden_size,num_layer,batch_first=True)
+        self.fc = nn.Linear(hidden_size*sequence_length,num_class)
+
+    def forward(self,x):
+        h0 = torch.zeros(self.num_layers,x.size(0), self.hidden_size).to(device)
+
+        #Forward Prop
+        out, _=self.rnn(x,h0)
+        out = out.reshape(out.shape[0],-1)
+        out = self.fc(out)
+        return out
+
 
 #Create Fully Connected Network
 class NN(nn.Module):
@@ -28,33 +53,16 @@ class NN(nn.Module):
         x  =self.fc2(x)
         return x
 
-#Todo: Create simple CNN
-class CNN(nn.Module):
-    def __init__(self,in_channels =1, num_classes = 10):
-        super(CNN,self).__init__()
-        self.conv1 = nn.Conv2d(in_channels = 1, out_channels=8, kernel_size=(3,3), stride=(1,1), padding=(1,1))
-        self.pool = nn.MaxPool2d(kernel_size=(2,2),stride=(2,2))
-        self.conv2 = nn.Conv2d(in_channels=8, out_channels=16,kernel_size=(3,3), stride=(1,1),padding=(1,1))
-        self.fc1 = nn.Linear(16*7*7, num_classes)
-
-    def forward(self,x):
-        x = F.relu(self.conv1(x))
-        x = self.pool(x)
-        x = F.relu(self.conv2(x))
-        x = self.pool(x)
-        x = x.reshape(x.shape[0],-1)
-        x = self.fc1(x)
-        return x
-
 #Load data
 
 train_dataset = datasets.MNIST(root='dataset/',train = True,transform=transforms.ToTensor(),download=True)
 train_loader = DataLoader(dataset = train_dataset,batch_size=batch_size, shuffle=True)
+
 test_dataset = datasets.MNIST(root='dataset/',train = False,transform=transforms.ToTensor(),download=True)
 test_loader = DataLoader(dataset = test_dataset,batch_size=batch_size, shuffle=True)
 
 #Initialize network
-model = CNN().to(device)
+model = RCNN(input_size,hidden_size,num_layers,num_classes).to(device)
 
 #Loss and optimizer
 criterion = nn.CrossEntropyLoss()
@@ -63,7 +71,8 @@ optimizer = optim.Adam(model.parameters(), lr = learning_rate)
 
 for epochs in range(num_epochs):
     for batch_idx, (data,targets) in enumerate(train_loader):
-        data = data.to(device=device)
+        #Get data to cuda if possible
+        data = data.to(device=device).squeeze(1)
         targets = targets.to(device=device)
 
         #forward
@@ -91,8 +100,9 @@ def check_accuracy(loader,model):
 
     with torch.no_grad():
         for x,y in loader:
-            x = x.to(device=device)
+            x = x.to(device=device).squeeze(1)
             y = y.to(device=device)
+
 
             scores = model(x)
             _,predictions = scores.max(1)
