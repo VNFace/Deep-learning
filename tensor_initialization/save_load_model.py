@@ -15,7 +15,7 @@ num_classes = 10
 learning_rate = 0.001
 batch_size = 64
 num_epochs  =5
-
+load_model = True
 #Create Fully Connected Network
 class NN(nn.Module):
     def __init__(self,input_size,num_classes):
@@ -50,6 +50,10 @@ def save_checkpoint(state, filename='my_checkpoint.pth.tar'):
     print("=> Saving checkpoint")
     torch.save(state, filename)
 
+def load_checkpoint(checkpoint):
+    print("=> load check point")
+    model.load_state_dict(checkpoint['state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
 
 #Load data
 
@@ -64,12 +68,15 @@ model = CNN().to(device)
 #Loss and optimizer
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr = learning_rate)
+
+if load_model:
+    load_checkpoint(torch.load("my_checkpoint.pth.tar"))
 #Train Network
 
 for epochs in range(num_epochs):
     losses = []
 
-    if epochs == 2:
+    if epochs % 3==0:
         checkpoint = {'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
         save_checkpoint(checkpoint)
 
@@ -80,6 +87,7 @@ for epochs in range(num_epochs):
         #forward
         scores = model(data)
         loss = criterion(scores,targets)
+        losses.append(loss.item())
 
         #backward
         optimizer.zero_grad()
